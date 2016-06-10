@@ -31,6 +31,30 @@ var showQuestion = function(question) {
 	return result;
 };
 
+var showAnswerers = function(answerer) {
+
+	// clone our result template code
+	var result = $('.templates .answerers').clone();
+
+	var name = result.find('.user a');
+	name.attr('href', answerer.user.link);
+	name.text(answerer.user.display_name);
+
+	var userElem = result.find('.user');
+	userElem.html(userElem.html() + 
+		"&nbsp(Id:" + answerer.user.user_id + ")");
+
+	var reputation = result.find('.reputation');
+	reputation.text(answerer.user.reputation);
+
+	var postCount = result.find('.post-count');
+	postCount.text(answerer.post_count);
+
+	var score = result.find('.score');
+	score.text(answerer.score);
+
+	return result;
+}
 
 // this function takes the results object from StackOverflow
 // and returns the number of results and tags to be appended to DOM
@@ -57,7 +81,6 @@ var getUnanswered = function(tags) {
 		order: 'desc',
 		sort: 'creation'
 	};
-	
 	$.ajax({
 		url: "http://api.stackexchange.com/2.2/questions/unanswered",
 		data: request,
@@ -81,6 +104,33 @@ var getUnanswered = function(tags) {
 	});
 };
 
+var getTopanswered = function (tags) {
+	var request = { 
+		site: 'stackoverflow',
+	};
+	$.ajax({
+		url: "http://api.stackexchange.com/2.2/tags/" +
+			 tags + "/top-answerers/all_time",
+		data: request,
+		dataType: "jsonp",//use jsonp to avoid cross origin issues
+		type: "GET",
+	})
+	.done(function(result){ //this waits for the ajax to return with a succesful promise object
+		var searchResults = showSearchResults(tags, result.items.length);
+
+		$('.search-results').html(searchResults);
+		//$.each is a higher order function. It takes an array and a function as an argument.
+		//The function is executed once for each item in the array.
+		$.each(result.items, function(i, item) {
+			var answerer = showAnswerers(item);
+			$('.results').append(answerer);
+		});
+	})
+	.fail(function(jqXHR, error){ //this waits for the ajax to return with an error promise object
+		var errorElem = showError(error);
+		$('.search-results').append(errorElem);
+	});
+};
 
 $(document).ready( function() {
 	$('.unanswered-getter').submit( function(e){
@@ -90,5 +140,11 @@ $(document).ready( function() {
 		// get the value of the tags the user submitted
 		var tags = $(this).find("input[name='tags']").val();
 		getUnanswered(tags);
+	});
+	$('.inspiration-getter').submit( function(e){
+		e.preventDefault();
+		$('.results').html('');
+		var tags = $(this).find("input[name='answerers']").val();
+		getTopanswered(tags);
 	});
 });
